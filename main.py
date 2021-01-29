@@ -2,11 +2,15 @@ from cu_lstm import CuLSTM
 import numpy as np
 
 
-def test_implementations(impls, input_size, hidden_size, Wh, Wi, B, y_ref, hx_ref, cx_ref):
+def test_implementations(impls, input_size, hidden_size, Wh, Wi, B, y_ref, hx_ref, cx_ref, loop=10):
     for impl in impls:
-        cuda_obj = CuLSTM(input_size, hidden_size, Wh, Wi, B, impl)
-        (cuda_y, cuda_hx, cuda_cx), cuda_exec_time = cuda_obj.forward(x, h0, c0)
-        print(f'{impl} execution time(ms): {cuda_exec_time}')
+        exec_times = []
+        for _ in range(loop):
+            cuda_obj = CuLSTM(input_size, hidden_size, Wh, Wi, B, impl)
+            (cuda_y, cuda_hx, cuda_cx), cuda_exec_time = cuda_obj.forward(x, h0, c0)
+            exec_times.append(cuda_exec_time)
+        uncertainty = (np.max(exec_times) - np.min(exec_times)) / 2
+        print(f'{impl}\t: {np.mean(exec_times)}\t{uncertainty}')
         np.testing.assert_allclose(cuda_y, y_ref, atol=1e-2 * seq_len, rtol=1e-3)
         np.testing.assert_allclose(cuda_hx, hx_ref, atol=1e-2 * seq_len, rtol=1e-3)
         np.testing.assert_allclose(cuda_cx, cx_ref, atol=1e-2 * seq_len, rtol=1e-3)
